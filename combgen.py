@@ -24,7 +24,11 @@ def parse_inputs_outputs(espresso_output_file):
     num_prod_terms = 0
     prod_terms = []
 
-    for line in espresso_output_file.splitlines():
+    # Open the file and read lines
+    with open(espresso_output_file, "r") as f:
+        lines = f.readlines()
+
+    for line in lines:
         line = line.strip()
 
         if line.startswith(".ilb"):
@@ -82,36 +86,29 @@ def write_module(filename, inputs, outputs, num_prod_terms, prod_terms):
 
             #Map bits to actual signal name for product term
             temp_terms = []
+            for bit, name in zip(in_bits, inputs):
+                if bit == '0':
+                    temp_terms.append(f"n{name}")
+                elif bit == '1':
+                    temp_terms.append(name)
             
+            #build AND tree
+            temp_count = 0
+            temp_wires = []
+            while len(temp_terms) > 4:
+                inputs_for_gate = temp_terms[:3]
+                temp_terms = temp_terms[4:]
+                wire_name = f"tmp{temp_count}_{index}"
+                f.write(f"and4$({wire_name}, {', '.join(inputs_for_gate)});\n")
+                temp_wires.append(wire_name)
+                temp_count += 1
 
-            input_num = 0
-            while (count != 0):
-                if (count % 4 == 0): #4 input gate
-                    f.write(f"and4$(p{index}, {in_terms[0]}, {in_terms[1]}, {in_terms[2]}, {in_terms[3]});")
-                    in_terms = in_terms[4:]
-                elif (count % 4 != 0):
-                    if (count % 3 == 0): #3 input gate
-                        f.write(f"and3$(p{index}, {in_terms[0]}, {in_terms[1]}, {in_terms[2]});")
-                        in_terms = in_terms[3:]
-                    elif (count % 3 != 0):
-                        if (count % 2 == 0): #2 input gate
-                            f.write(f"and2$(p{index}, {in_terms[0]}, {in_terms[1]});")
-                            in_terms = in_terms[2:]
-                        elif (count % 2 != 0): #assign gate directly
-                            f.write(f"assign p{index} = {in_terms[0]});")
-                            in_terms = in_terms[1:]
-
-                count = count - input_num
-                temp_terms[index] = f"p{index}"
-                temp_count = temp_count + 1
-
-            while (temp_count != 0):
-
-
-
-                
-
+            final_inputs = temp_wires + temp_terms
+            gate_type = f"and{len(final_inputs)}$"
+            f.write(f"{gate_type}(p{index}, {', '.join(final_inputs)});\n")
         
+            index = index + 1
+            num_prod_terms = num_prod_terms - 1
         f.write("endmodule\n")
 
 #Main
@@ -126,7 +123,7 @@ def main():
 
     #Retrieve minimized boolean expression
     print("Running espresso...")
-    minimized = run_espresso(input_file, espresso_output_file, True)
+    minimized = run_espresso(input_file, espresso_output_file)
     print("Espresso output:")
     print(minimized)
 

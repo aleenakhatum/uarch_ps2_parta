@@ -1,0 +1,14 @@
+module temp(
+    input in[1],
+    input in[0],
+    output out[0],
+    output out[1],
+    output out[2],
+    output out[3],
+);
+
+and2$(p0, nin[1], nin[0]);
+and2$(p1, nin[1], in[0]);
+and2$(p2, in[1], nin[0]);
+and2$(p3, in[1], in[0]);
+endmodule

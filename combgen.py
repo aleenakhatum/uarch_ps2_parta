@@ -76,9 +76,11 @@ def write_module(filename, inputs, outputs, num_prod_terms, prod_terms):
         f.write(");\n\n")
 
         #write structural verilog
-        index = 0
-        while (num_prod_terms):
-            cur_term = prod_terms[index]
+        and_index = 0
+        and_num = num_prod_terms
+        or_temp_terms = []
+        while (and_num):
+            cur_term = prod_terms[and_index]
             in_bits = cur_term[0]
 
             in_terms = inputs
@@ -92,23 +94,58 @@ def write_module(filename, inputs, outputs, num_prod_terms, prod_terms):
                 elif bit == '1':
                     temp_terms.append(name)
             
-            #build AND tree
-            temp_count = 0
+            and_temp_count = 0
             temp_wires = []
-            while len(temp_terms) > 4:
-                inputs_for_gate = temp_terms[:3]
-                temp_terms = temp_terms[4:]
-                wire_name = f"tmp{temp_count}_{index}"
+
+            #build AND tree
+            and_temp_terms = temp_terms
+            while len(and_temp_terms) > 4:
+                inputs_for_gate = and_temp_terms[:3]
+                and_temp_terms = and_temp_terms[4:]
+                wire_name = f"tmp{and_temp_count}_{and_index}"
                 f.write(f"and4$({wire_name}, {', '.join(inputs_for_gate)});\n")
                 temp_wires.append(wire_name)
-                temp_count += 1
+                and_temp_count += 1
+            
+            #build OR terms
+            or_temp_terms.append(f"p{and_index}")
 
-            final_inputs = temp_wires + temp_terms
+            #Write verilog for each product term into module
+            final_inputs = temp_wires + and_temp_terms
             gate_type = f"and{len(final_inputs)}$"
-            f.write(f"{gate_type}(p{index}, {', '.join(final_inputs)});\n")
+            f.write(f"{gate_type}(p{and_index}, {', '.join(final_inputs)});\n")
+            
+            and_index = and_index + 1
+            and_num = and_num - 1
+
+        #Build OR tree
+        or_index = 0
+        or_temp_count = 0
+        while len(or_temp_terms) > 1:
+            temp_wires = []
+            while len(or_temp_terms) >= 4:
+                inputs_for_gate = or_temp_terms[:4]
+                or_temp_terms = or_temp_terms[4:]
+                wire_name = f"tmp{or_temp_count}_{or_index}"
+                f.write(f"or4$({wire_name}, {', '.join(inputs_for_gate)});\n")
+                temp_wires.append(wire_name)
+                or_temp_count += 1
+            
+            if len(or_temp_terms) > 1:
+                wire_name = f"tmp{or_temp_count}_{or_index}"
+                gate_type = f"or{len(or_temp_terms)}$"
+                f.write(f"{gate_type}({wire_name}, {', '.join(or_temp_terms)});\n")
+                temp_wires.append(wire_name)
+                or_temp_count += 1
+            else:
+                temp_wires.extend(or_temp_terms)
+
+            or_temp_terms = temp_wires
         
-            index = index + 1
-            num_prod_terms = num_prod_terms - 1
+        f.write(f"assign {outputs[or_index]} = {or_temp_terms[0]};\n")
+        or_index = or_index + 1
+
+        print("blah")
         f.write("endmodule\n")
 
 #Main

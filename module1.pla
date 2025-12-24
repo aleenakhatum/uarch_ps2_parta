@@ -11,4 +11,6 @@ and2$(p0, nin[1], nin[0]);
 and2$(p1, nin[1], in[0]);
 and2$(p2, in[1], nin[0]);
 and2$(p3, in[1], in[0]);
+or4$(tmp0_0, p0, p1, p2, p3);
+assign out[0] = tmp0_0;
 endmodule

@@ -1,25 +1,26 @@
 module temp(
-    input in[1],
-    input in[0],
-    output out[0],
-    output out[1],
-    output out[2],
-    output out[3]
+    input in_1,
+    input in_0,
+    output out_0,
+    output out_1,
+    output out_2,
+    output out_3
 );
 
-wire nin[1];
-not1$(nin[1], in[1]);
-wire nin[0];
-not1$(nin[0], in[0]);
+wire nin_1;
+wire nin_0;
 
-and2$(p0_0, nin[1], nin[0]);
-and2$(p1_1, nin[1], in[0]);
-and2$(p2_2, in[1], nin[0]);
-and2$(p3_3, in[1], in[0]);
+inv1$ u0 (nin_1, in_1);
+inv1$ u1 (nin_0, in_0);
 
-assign out[0] = p0_0;
-assign out[1] = p1_1;
-assign out[2] = p2_2;
-assign out[3] = p3_3;
+and2$ u2 (p0_0, nin_1, nin_0);
+and2$ u3 (p1_1, nin_1, in_0);
+and2$ u4 (p2_2, in_1, nin_0);
+and2$ u5 (p3_3, in_1, in_0);
+
+assign out_0 = p0_0;
+assign out_1 = p1_1;
+assign out_2 = p2_2;
+assign out_3 = p3_3;
 
 endmodule

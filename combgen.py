@@ -1,4 +1,5 @@
 import subprocess
+import math
 
 #Runs espresso tool on the original truth table input to generate a minimized boolean expression
 def run_espresso(input_file, output_file, output_filter=None):
@@ -18,7 +19,7 @@ def run_espresso(input_file, output_file, output_filter=None):
         f.write(result)
     return result
 
-def parse_inputs_outputs(espresso_output_file):
+def parse_comb_file(espresso_output_file):
     inputs = []
     outputs = []
     num_prod_terms = 0
@@ -60,7 +61,7 @@ def count_literals(in_bits):
             count += 1
     return count
 
-def write_module(filename, inputs, outputs, num_prod_terms, prod_terms):
+def write_comb_module(filename, inputs, outputs, num_prod_terms, prod_terms):
     with open(filename, "w") as f:
         f.write("module temp(\n")
 
@@ -77,7 +78,13 @@ def write_module(filename, inputs, outputs, num_prod_terms, prod_terms):
         # Generate inverted wires
         for inp in inputs:
             f.write(f"wire n{inp};\n")
-            f.write(f"not1$(n{inp}, {inp});\n")
+        f.write("\n")
+
+        # Add NOT gates with instance names
+        gate_count = 0
+        for inp in inputs:
+            f.write(f"inv1$ u{gate_count} (n{inp}, {inp});\n")
+            gate_count += 1
         f.write("\n")
 
         # Initialize lists of product wires for each output
@@ -103,11 +110,12 @@ def write_module(filename, inputs, outputs, num_prod_terms, prod_terms):
                     elif bit_in == "-":
                         continue
 
-                # Write the AND gate
+                # Write the AND gate with instance name
                 if len(term_inputs) == 1:
                     f.write(f"assign {w} = {term_inputs[0]};\n")
                 else:
-                    f.write(f"and{len(term_inputs)}$({w}, {', '.join(term_inputs)});\n")
+                    f.write(f"and{len(term_inputs)}$ u{gate_count} ({w}, {', '.join(term_inputs)});\n")
+                    gate_count += 1
 
         f.write("\n")
 
@@ -119,11 +127,12 @@ def write_module(filename, inputs, outputs, num_prod_terms, prod_terms):
             elif len(wires) == 1:
                 f.write(f"assign {out} = {wires[0]};\n")
             else:
-                f.write(f"or{len(wires)}$({out}, {', '.join(wires)});\n")
+                f.write(f"or{len(wires)}$ u{gate_count} ({out}, {', '.join(wires)});\n")
+                gate_count += 1
 
         f.write("\nendmodule\n")
 
-def write_module1(filename, inputs, outputs, num_prod_terms, prod_terms):
+def write_comb_module1(filename, inputs, outputs, num_prod_terms, prod_terms):
     with open(filename, "w") as f:
         f.write("module temp(\n")
 
@@ -210,6 +219,134 @@ def write_module1(filename, inputs, outputs, num_prod_terms, prod_terms):
         print("blah")
         f.write("endmodule\n")
 
+def write_fsm_module(filename, inputs, outputs, states, transitions):
+    """
+    Generate a structural Moore FSM module.
+    transitions: list of tuples (current_state, input_bits, next_state, output_bits)
+    """
+    state_encoding = {s: format(i, f"0{math.ceil(math.log2(len(states)))}b") for i, s in enumerate(states)}
+    state_bits = max(1, math.ceil(math.log2(len(states))))
+
+    with open(filename, "w") as f:
+        f.write("module fsm(\n")
+        f.write("    input clk,\n    input rst,\n")
+        for inp in inputs:
+            f.write(f"    input {inp},\n")
+        for i, outp in enumerate(outputs):
+            comma = "," if i < len(outputs)-1 else ""
+            f.write(f"    output {outp}{comma}\n")
+        f.write(");\n\n")
+
+        # State register
+        f.write(f"reg [{state_bits-1}:0] state, next_state;\n\n")
+
+        # Inverted input wires
+        for inp in inputs:
+            f.write(f"wire n{inp};\ninv1$ (n{inp}, {inp});\n")
+        f.write("\n")
+
+        # --- Next-state logic ---
+        next_state_bits = [f"ns{i}" for i in range(state_bits)]
+        for nsb in next_state_bits:
+            f.write(f"wire {nsb};\n")
+        f.write("\n")
+
+        for i in range(state_bits):
+            term_wires = []
+            for tidx, (cur_state, input_bits, next_state, output_bits) in enumerate(transitions):
+                if state_encoding[next_state][i] != "1":
+                    continue
+                # Build AND inputs for this cube
+                term_inputs = []
+                # current state bits
+                cur_enc = state_encoding[cur_state]
+                for bidx, b in enumerate(cur_enc):
+                    term_inputs.append(f"state[{bidx}]" if b=="1" else f"!state[{bidx}]")
+                # FSM input bits
+                for b, name in zip(input_bits, inputs):
+                    if b == "1": term_inputs.append(name)
+                    elif b == "0": term_inputs.append(f"n{name}")
+                wname = f"ns{i}_p{tidx}"
+                term_wires.append(wname)
+                if len(term_inputs) == 1:
+                    f.write(f"assign {wname} = {term_inputs[0]};\n")
+                else:
+                    f.write(f"and{len(term_inputs)}$({wname}, {', '.join(term_inputs)});\n")
+            # OR the product terms
+            if len(term_wires) == 0:
+                f.write(f"assign {next_state_bits[i]} = 1'b0;\n")
+            elif len(term_wires) == 1:
+                f.write(f"assign {next_state_bits[i]} = {term_wires[0]};\n")
+            else:
+                f.write(f"or{len(term_wires)}$({next_state_bits[i]}, {', '.join(term_wires)});\n")
+            f.write("\n")
+
+        # --- Moore outputs ---
+        for oidx, outp in enumerate(outputs):
+            term_wires = []
+            for tidx, (cur_state, _, _, output_bits) in enumerate(transitions):
+                if output_bits[oidx] != "1":
+                    continue
+                term_inputs = []
+                cur_enc = state_encoding[cur_state]
+                for bidx, b in enumerate(cur_enc):
+                    term_inputs.append(f"state[{bidx}]" if b=="1" else f"!state[{bidx}]")
+                wname = f"{outp}_p{tidx}"
+                term_wires.append(wname)
+                if len(term_inputs) == 1:
+                    f.write(f"assign {wname} = {term_inputs[0]};\n")
+                else:
+                    f.write(f"and{len(term_inputs)}$({wname}, {', '.join(term_inputs)});\n")
+            # OR them
+            if len(term_wires) == 0:
+                f.write(f"assign {outp} = 1'b0;\n")
+            elif len(term_wires) == 1:
+                f.write(f"assign {outp} = {term_wires[0]};\n")
+            else:
+                f.write(f"or{len(term_wires)}$({outp}, {', '.join(term_wires)});\n")
+            f.write("\n")
+
+        # --- State register ---
+        f.write("always @(posedge clk or posedge rst) begin\n")
+        f.write("    if (rst) state <= 0;\n")
+        f.write("    else state <= {" + ", ".join(next_state_bits) + "};\n")
+        f.write("end\n\n")
+
+        f.write("endmodule\n")
+
+def detect_input_type(filename):
+    """Return 'fsm' if .st line exists, otherwise 'comb'."""
+    with open(filename, "r") as f:
+        for line in f:
+            if line.strip().startswith(".st"):
+                return "fsm"
+    return "comb"
+
+def parse_fsm_file(filename):
+    inputs = []
+    outputs = []
+    states = []
+    transitions = []
+
+    with open(filename, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if line.startswith(".ilb"):
+                inputs = line.split()[1:]
+            elif line.startswith(".ob"):
+                outputs = line.split()[1:]
+            elif line.startswith(".st"):
+                states = line.split()[1:]
+            elif not line.startswith("."):
+                # assume transition line
+                parts = line.split()
+                cur_state, input_bits, next_state, output_bits = parts
+                transitions.append((cur_state, input_bits, next_state, output_bits))
+    return inputs, outputs, states, transitions
+
+
 #Main
 def main():
     file_num = 1 #  CHANGE BEFORE RUNNING
@@ -220,15 +357,28 @@ def main():
     # Convert line endings to Unix format
     subprocess.run(["dos2unix", input_file], check=True)
 
-    #Retrieve minimized boolean expression
-    print("Running espresso...")
-    minimized = run_espresso(input_file, espresso_output_file)
-    print("Espresso output:")
-    print(minimized)
+    # Determine type of input
+    input_type = detect_input_type(input_file)
+    print(f"Detected input type: {input_type}")
 
-    #Create module file
-    inputs, outputs, num_prod_terms, prod_terms = parse_inputs_outputs(espresso_output_file)
-    write_module(output_file, inputs, outputs, num_prod_terms, prod_terms)
+    #Retrieve minimized boolean expression
+    if input_type == "fsm":
+        print("State Machine Input File DETECTED")
+        inputs, outputs, states, transitions = parse_fsm_file(input_file)
+        write_fsm_module(output_file, inputs, outputs, states, transitions)
+        print(f"State Machine Module Complete in: {output_file}")
+
+    elif input_type == "comb":
+        print("Truth Table Input File DETECTED")
+        print("Running espresso...")
+        minimized = run_espresso(input_file, espresso_output_file)
+        print("Espresso output:")
+        print(minimized)
+
+        #Create module file
+        inputs, outputs, num_prod_terms, prod_terms = parse_comb_file(espresso_output_file)
+        write_comb_module(output_file, inputs, outputs, num_prod_terms, prod_terms)
+        print(f"Combinational Logic Module Complete in: {output_file}")
 
 if __name__ == "__main__":
     main()

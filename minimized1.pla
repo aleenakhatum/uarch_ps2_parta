@@ -1,7 +1,7 @@
 .i 2
 .o 4
-.ilb in[1] in[0]
-.ob out[0] out[1] out[2] out[3]
+.ilb in_1 in_0
+.ob out_0 out_1 out_2 out_3
 .p 4
 00 1000
 01 0100

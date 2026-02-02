@@ -219,17 +219,21 @@ def write_comb_module1(filename, inputs, outputs, num_prod_terms, prod_terms):
         print("blah")
         f.write("endmodule\n")
 
+
 def write_fsm_module(filename, inputs, outputs, states, transitions):
     """
-    Generate a structural Moore FSM module.
-    transitions: list of tuples (current_state, input_bits, next_state, output_bits)
+    Generate a structural Moore FSM module using `dff$` cells for state storage.
+    All wires (including intermediate AND/OR wires) are declared before use.
     """
+    import math
+
     state_encoding = {s: format(i, f"0{math.ceil(math.log2(len(states)))}b") for i, s in enumerate(states)}
     state_bits = max(1, math.ceil(math.log2(len(states))))
 
     with open(filename, "w") as f:
+        # --- Module header ---
         f.write("module fsm(\n")
-        f.write("    input clk,\n    input rst,\n")
+        f.write("    input clk,\n    input rst,\n    input set,\n")
         for inp in inputs:
             f.write(f"    input {inp},\n")
         for i, outp in enumerate(outputs):
@@ -237,48 +241,87 @@ def write_fsm_module(filename, inputs, outputs, states, transitions):
             f.write(f"    output {outp}{comma}\n")
         f.write(");\n\n")
 
-        # State register
-        f.write(f"reg [{state_bits-1}:0] state, next_state;\n\n")
+        gate_count = 0
 
-        # Inverted input wires
-        for inp in inputs:
-            f.write(f"wire n{inp};\ninv1$ (n{inp}, {inp});\n")
+        # --- State wires ---
+        for i in range(state_bits):
+            f.write(f"wire state{i};\n")
+            f.write(f"wire nstate{i};\n")
         f.write("\n")
 
-        # --- Next-state logic ---
+        # --- Inverted input wires ---
+        for inp in inputs:
+            f.write(f"wire n{inp};\n")
+            f.write(f"inv1$ u{gate_count} (n{inp}, {inp});\n")
+            gate_count += 1
+        f.write("\n")
+
+        # --- Next-state wires ---
         next_state_bits = [f"ns{i}" for i in range(state_bits)]
         for nsb in next_state_bits:
             f.write(f"wire {nsb};\n")
         f.write("\n")
 
+        # --- Collect all intermediate AND/OR wires before generating gates ---
+        intermediate_wires = set()
+
+        # --- Next-state AND terms ---
+        for i in range(state_bits):
+            for tidx, (cur_state, input_bits, next_state, output_bits) in enumerate(transitions):
+                if state_encoding[next_state][i] != "1":
+                    continue
+                wname = f"ns{i}_p{tidx}"
+                intermediate_wires.add(wname)
+
+        # --- Output AND terms ---
+        for oidx, outp in enumerate(outputs):
+            for tidx, (cur_state, _, _, output_bits) in enumerate(transitions):
+                if output_bits[oidx] != "1":
+                    continue
+                wname = f"{outp}_p{tidx}"
+                intermediate_wires.add(wname)
+
+        # --- Declare all intermediate wires ---
+        for w in intermediate_wires:
+            f.write(f"wire {w};\n")
+        f.write("\n")
+
+        # --- Next-state logic ---
         for i in range(state_bits):
             term_wires = []
             for tidx, (cur_state, input_bits, next_state, output_bits) in enumerate(transitions):
                 if state_encoding[next_state][i] != "1":
                     continue
-                # Build AND inputs for this cube
+
+                # AND inputs
                 term_inputs = []
-                # current state bits
                 cur_enc = state_encoding[cur_state]
                 for bidx, b in enumerate(cur_enc):
-                    term_inputs.append(f"state[{bidx}]" if b=="1" else f"!state[{bidx}]")
-                # FSM input bits
+                    term_inputs.append(f"state{bidx}" if b=="1" else f"nstate{bidx}")
                 for b, name in zip(input_bits, inputs):
-                    if b == "1": term_inputs.append(name)
-                    elif b == "0": term_inputs.append(f"n{name}")
+                    if b == "1":
+                        term_inputs.append(name)
+                    elif b == "0":
+                        term_inputs.append(f"n{name}")
+
                 wname = f"ns{i}_p{tidx}"
                 term_wires.append(wname)
+
+                # Write AND gate
                 if len(term_inputs) == 1:
                     f.write(f"assign {wname} = {term_inputs[0]};\n")
                 else:
-                    f.write(f"and{len(term_inputs)}$({wname}, {', '.join(term_inputs)});\n")
+                    f.write(f"and{len(term_inputs)}$ u{gate_count} ({wname}, {', '.join(term_inputs)});\n")
+                    gate_count += 1
+
             # OR the product terms
             if len(term_wires) == 0:
                 f.write(f"assign {next_state_bits[i]} = 1'b0;\n")
             elif len(term_wires) == 1:
                 f.write(f"assign {next_state_bits[i]} = {term_wires[0]};\n")
             else:
-                f.write(f"or{len(term_wires)}$({next_state_bits[i]}, {', '.join(term_wires)});\n")
+                f.write(f"or{len(term_wires)}$ u{gate_count} ({next_state_bits[i]}, {', '.join(term_wires)});\n")
+                gate_count += 1
             f.write("\n")
 
         # --- Moore outputs ---
@@ -287,32 +330,37 @@ def write_fsm_module(filename, inputs, outputs, states, transitions):
             for tidx, (cur_state, _, _, output_bits) in enumerate(transitions):
                 if output_bits[oidx] != "1":
                     continue
+
                 term_inputs = []
                 cur_enc = state_encoding[cur_state]
                 for bidx, b in enumerate(cur_enc):
-                    term_inputs.append(f"state[{bidx}]" if b=="1" else f"!state[{bidx}]")
+                    term_inputs.append(f"state{bidx}" if b=="1" else f"nstate{bidx}")
+
                 wname = f"{outp}_p{tidx}"
                 term_wires.append(wname)
+
                 if len(term_inputs) == 1:
                     f.write(f"assign {wname} = {term_inputs[0]};\n")
                 else:
-                    f.write(f"and{len(term_inputs)}$({wname}, {', '.join(term_inputs)});\n")
-            # OR them
+                    f.write(f"and{len(term_inputs)}$ u{gate_count} ({wname}, {', '.join(term_inputs)});\n")
+                    gate_count += 1
+
             if len(term_wires) == 0:
                 f.write(f"assign {outp} = 1'b0;\n")
             elif len(term_wires) == 1:
                 f.write(f"assign {outp} = {term_wires[0]};\n")
             else:
-                f.write(f"or{len(term_wires)}$({outp}, {', '.join(term_wires)});\n")
+                f.write(f"or{len(term_wires)}$ u{gate_count} ({outp}, {', '.join(term_wires)});\n")
+                gate_count += 1
             f.write("\n")
 
-        # --- State register ---
-        f.write("always @(posedge clk or posedge rst) begin\n")
-        f.write("    if (rst) state <= 0;\n")
-        f.write("    else state <= {" + ", ".join(next_state_bits) + "};\n")
-        f.write("end\n\n")
+        # --- State flip-flops using dff$ ---
+        for i in range(state_bits):
+            f.write(f"dff$ u_dff{i} (clk, {next_state_bits[i]}, state{i}, nstate{i}, rst, set);\n")
+        f.write("\n")
 
         f.write("endmodule\n")
+
 
 def detect_input_type(filename):
     """Return 'fsm' if .st line exists, otherwise 'comb'."""
@@ -349,7 +397,7 @@ def parse_fsm_file(filename):
 
 #Main
 def main():
-    file_num = 1 #  CHANGE BEFORE RUNNING
+    file_num = 3 #  CHANGE BEFORE RUNNING
     input_file = f"input{file_num}.pla"
     espresso_output_file = f"minimized{file_num}.pla"
     output_file = f"module{file_num}.pla"

@@ -9,23 +9,24 @@ module temp(
 );
 
 wire nQ1;
-not1$(nQ1, Q1);
 wire nQ0;
-not1$(nQ0, Q0);
 wire nD;
-not1$(nD, D);
 wire nN;
-not1$(nN, N);
 
-and2$(p0_0, nQ1, D);
-and3$(p1_1, Q1, nQ0, D);
-and2$(p2_2, Q1, Q0);
-and2$(p3_1, nQ0, N);
-and3$(p4_0, nQ1, Q0, N);
-and3$(p4_1, nQ1, Q0, N);
+inv1$ u0 (nQ1, Q1);
+inv1$ u1 (nQ0, Q0);
+inv1$ u2 (nD, D);
+inv1$ u3 (nN, N);
 
-or2$(T1, p0_0, p4_0);
-or3$(T0, p1_1, p3_1, p4_1);
+and2$ u4 (p0_0, nQ1, D);
+and3$ u5 (p1_1, Q1, nQ0, D);
+and2$ u6 (p2_2, Q1, Q0);
+and2$ u7 (p3_1, nQ0, N);
+and3$ u8 (p4_0, nQ1, Q0, N);
+and3$ u9 (p4_1, nQ1, Q0, N);
+
+or2$ u10 (T1, p0_0, p4_0);
+or3$ u11 (T0, p1_1, p3_1, p4_1);
 assign OPEN = p2_2;
 
 endmodule

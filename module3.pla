@@ -1,28 +1,32 @@
 module fsm(
     input clk,
     input rst,
+    input set,
     input x,
     output z
 );
 
-reg [0:0] state, next_state;
+wire state0;
+wire nstate0;
 
 wire nx;
-not1$ (nx, x);
+inv1$ u0 (nx, x);
 
 wire ns0;
 
-and2$(ns0_p1, !state[0], x);
-and2$(ns0_p3, state[0], x);
-or2$(ns0, ns0_p1, ns0_p3);
+wire z_p3;
+wire z_p1;
+wire ns0_p3;
+wire ns0_p1;
 
-assign z_p1 = !state[0];
-assign z_p3 = state[0];
-or2$(z, z_p1, z_p3);
+and2$ u1 (ns0_p1, nstate0, x);
+and2$ u2 (ns0_p3, state0, x);
+or2$ u3 (ns0, ns0_p1, ns0_p3);
 
-always @(posedge clk or posedge rst) begin
-    if (rst) state <= 0;
-    else state <= {ns0};
-end
+assign z_p1 = nstate0;
+assign z_p3 = state0;
+or2$ u4 (z, z_p1, z_p3);
+
+dff$ u_dff0 (clk, ns0, state0, nstate0, rst, set);
 
 endmodule

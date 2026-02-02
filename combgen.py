@@ -5,7 +5,7 @@ def run_espresso(input_file, output_file, output_filter=None):
     """Run espresso on a PLA input file and save output."""
     
     #Build command
-    cmd = ["espresso.linux"]
+    cmd = ["./espresso.linux"]
     if (output_filter):
         cmd.extend(["-o", output_filter])
     cmd.append(input_file)
@@ -62,6 +62,64 @@ def count_literals(in_bits):
 
 
 def write_module(filename, inputs, outputs, num_prod_terms, prod_terms):
+    with open(filename, "w") as f:
+        f.write("module temp(\n")
+
+        # Inputs
+        for inp in inputs:
+            f.write(f"    input {inp},\n")
+
+        # Outputs (just assume 1 output espresso minimized)
+        for i, outp in enumerate(outputs):
+            comma = "," if i < len(outputs)-1 else ""
+            f.write(f"    output {outp}{comma}\n")
+        f.write(");\n\n")
+
+        # Generate inverted wires
+        for inp in inputs:
+            f.write(f"wire n{inp};\n")
+            f.write(f"not1$(n{inp}, {inp});\n")
+        f.write("\n")
+
+        product_wires = []
+
+        # Build each product term (each espresso cube)
+        for idx, (in_bits, out_bits) in enumerate(prod_terms):
+            # Only generate cubes that produce output = 1
+            if out_bits.strip() != "1":
+                continue
+
+            w = f"p{idx}"
+            product_wires.append(w)
+
+            term_inputs = []
+            for bit, name in zip(in_bits, inputs):
+                if bit == "1":
+                    term_inputs.append(name)
+                elif bit == "0":
+                    term_inputs.append(f"n{name}")
+                elif bit == "-":
+                    continue  # don't include this input
+
+            if len(term_inputs) == 1:
+                # trivial cube
+                f.write(f"assign {w} = {term_inputs[0]};\n")
+            else:
+                f.write(f"and{len(term_inputs)}$({w}, {', '.join(term_inputs)});\n")
+
+        f.write("\n")
+
+        # OR all product terms to form the final output
+        if len(product_wires) == 0:
+            f.write(f"assign {outputs[0]} = 1'b0;\n")
+        elif len(product_wires) == 1:
+            f.write(f"assign {outputs[0]} = {product_wires[0]};\n")
+        else:
+            f.write(f"or{len(product_wires)}$({outputs[0]}, {', '.join(product_wires)});\n")
+
+        f.write("\nendmodule\n")
+
+def write_module1(filename, inputs, outputs, num_prod_terms, prod_terms):
     with open(filename, "w") as f:
         f.write("module temp(\n")
 

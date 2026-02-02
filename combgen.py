@@ -60,7 +60,6 @@ def count_literals(in_bits):
             count += 1
     return count
 
-
 def write_module(filename, inputs, outputs, num_prod_terms, prod_terms):
     with open(filename, "w") as f:
         f.write("module temp(\n")
@@ -69,7 +68,7 @@ def write_module(filename, inputs, outputs, num_prod_terms, prod_terms):
         for inp in inputs:
             f.write(f"    input {inp},\n")
 
-        # Outputs (just assume 1 output espresso minimized)
+        # Outputs
         for i, outp in enumerate(outputs):
             comma = "," if i < len(outputs)-1 else ""
             f.write(f"    output {outp}{comma}\n")
@@ -81,41 +80,46 @@ def write_module(filename, inputs, outputs, num_prod_terms, prod_terms):
             f.write(f"not1$(n{inp}, {inp});\n")
         f.write("\n")
 
-        product_wires = []
+        # Initialize lists of product wires for each output
+        product_wires_per_output = {out: [] for out in outputs}
 
-        # Build each product term (each espresso cube)
+        # Build each product term
         for idx, (in_bits, out_bits) in enumerate(prod_terms):
-            # Only generate cubes that produce output = 1
-            if out_bits.strip() != "1":
-                continue
+            out_bits = out_bits.strip()
+            for o_index, bit in enumerate(out_bits):
+                if bit != "1":
+                    continue  # Only consider outputs that are 1
 
-            w = f"p{idx}"
-            product_wires.append(w)
+                w = f"p{idx}_{o_index}"
+                product_wires_per_output[outputs[o_index]].append(w)
 
-            term_inputs = []
-            for bit, name in zip(in_bits, inputs):
-                if bit == "1":
-                    term_inputs.append(name)
-                elif bit == "0":
-                    term_inputs.append(f"n{name}")
-                elif bit == "-":
-                    continue  # don't include this input
+                # Build AND inputs
+                term_inputs = []
+                for bit_in, name in zip(in_bits, inputs):
+                    if bit_in == "1":
+                        term_inputs.append(name)
+                    elif bit_in == "0":
+                        term_inputs.append(f"n{name}")
+                    elif bit_in == "-":
+                        continue
 
-            if len(term_inputs) == 1:
-                # trivial cube
-                f.write(f"assign {w} = {term_inputs[0]};\n")
-            else:
-                f.write(f"and{len(term_inputs)}$({w}, {', '.join(term_inputs)});\n")
+                # Write the AND gate
+                if len(term_inputs) == 1:
+                    f.write(f"assign {w} = {term_inputs[0]};\n")
+                else:
+                    f.write(f"and{len(term_inputs)}$({w}, {', '.join(term_inputs)});\n")
 
         f.write("\n")
 
-        # OR all product terms to form the final output
-        if len(product_wires) == 0:
-            f.write(f"assign {outputs[0]} = 1'b0;\n")
-        elif len(product_wires) == 1:
-            f.write(f"assign {outputs[0]} = {product_wires[0]};\n")
-        else:
-            f.write(f"or{len(product_wires)}$({outputs[0]}, {', '.join(product_wires)});\n")
+        # OR all product terms for each output
+        for out in outputs:
+            wires = product_wires_per_output[out]
+            if len(wires) == 0:
+                f.write(f"assign {out} = 1'b0;\n")
+            elif len(wires) == 1:
+                f.write(f"assign {out} = {wires[0]};\n")
+            else:
+                f.write(f"or{len(wires)}$({out}, {', '.join(wires)});\n")
 
         f.write("\nendmodule\n")
 
@@ -208,7 +212,7 @@ def write_module1(filename, inputs, outputs, num_prod_terms, prod_terms):
 
 #Main
 def main():
-    file_num = 1
+    file_num = 1 #  CHANGE BEFORE RUNNING
     input_file = f"input{file_num}.pla"
     espresso_output_file = f"minimized{file_num}.pla"
     output_file = f"module{file_num}.pla"

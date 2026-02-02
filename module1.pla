@@ -12,7 +12,14 @@ not1$(nin[1], in[1]);
 wire nin[0];
 not1$(nin[0], in[0]);
 
+and2$(p0_0, nin[1], nin[0]);
+and2$(p1_1, nin[1], in[0]);
+and2$(p2_2, in[1], nin[0]);
+and2$(p3_3, in[1], in[0]);
 
-assign out[0] = 1'b0;
+assign out[0] = p0_0;
+assign out[1] = p1_1;
+assign out[2] = p2_2;
+assign out[3] = p3_3;
 
 endmodule

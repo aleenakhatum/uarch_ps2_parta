@@ -1,0 +1,31 @@
+module temp(
+    input Q1,
+    input Q0,
+    input D,
+    input N,
+    output T1,
+    output T0,
+    output OPEN
+);
+
+wire nQ1;
+not1$(nQ1, Q1);
+wire nQ0;
+not1$(nQ0, Q0);
+wire nD;
+not1$(nD, D);
+wire nN;
+not1$(nN, N);
+
+and2$(p0_0, nQ1, D);
+and3$(p1_1, Q1, nQ0, D);
+and2$(p2_2, Q1, Q0);
+and2$(p3_1, nQ0, N);
+and3$(p4_0, nQ1, Q0, N);
+and3$(p4_1, nQ1, Q0, N);
+
+or2$(T1, p0_0, p4_0);
+or3$(T0, p1_1, p3_1, p4_1);
+assign OPEN = p2_2;
+
+endmodule

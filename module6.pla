@@ -1,0 +1,62 @@
+module lock(
+    input I15,
+    input I14,
+    input I13,
+    input I12,
+    input I11,
+    input I10,
+    input I9,
+    input I8,
+    input I7,
+    input I6,
+    input I5,
+    input I4,
+    input I3,
+    input I2,
+    input I1,
+    input I0,
+    output UNLOCK
+);
+
+wire nI15;
+wire nI14;
+wire nI13;
+wire nI12;
+wire nI11;
+wire nI10;
+wire nI9;
+wire nI8;
+wire nI7;
+wire nI6;
+wire nI5;
+wire nI4;
+wire nI3;
+wire nI2;
+wire nI1;
+wire nI0;
+
+inv1$ u0 (nI15, I15);
+inv1$ u1 (nI14, I14);
+inv1$ u2 (nI13, I13);
+inv1$ u3 (nI12, I12);
+inv1$ u4 (nI11, I11);
+inv1$ u5 (nI10, I10);
+inv1$ u6 (nI9, I9);
+inv1$ u7 (nI8, I8);
+inv1$ u8 (nI7, I7);
+inv1$ u9 (nI6, I6);
+inv1$ u10 (nI5, I5);
+inv1$ u11 (nI4, I4);
+inv1$ u12 (nI3, I3);
+inv1$ u13 (nI2, I2);
+inv1$ u14 (nI1, I1);
+inv1$ u15 (nI0, I0);
+
+and4$ u16 (tmp16, I15, I14, I13, I12);
+and4$ u17 (tmp17, tmp16, nI11, nI10, nI9);
+and4$ u18 (tmp18, tmp17, nI8, I7, nI6);
+and4$ u19 (tmp19, tmp18, I5, nI4, nI3);
+and4$ u20 (p0_0, tmp19, I2, nI1, I0);
+
+assign UNLOCK = p0_0;
+endmodule

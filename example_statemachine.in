@@ -6,8 +6,11 @@
 
 .st S0 S1     # FSM states
 
+.so S0 0
+.so S1 1
+
 # Transitions: current_state input_bits next_state output_bits
-S0 0 S0 0
-S0 1 S1 1
-S1 0 S0 0
-S1 1 S1 1
+.t S0 0 S0
+.t S0 1 S1
+.t S1 0 S0
+.t S1 1 S1

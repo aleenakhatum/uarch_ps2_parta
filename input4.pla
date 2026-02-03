@@ -1,0 +1,20 @@
+.i 1
+.o 1
+
+.ilb x
+.ob z
+
+.st S0 S1 S2
+
+.so S0 0
+.so S1 0
+.so S2 1
+
+.t S0 0 S0
+.t S0 1 S1
+
+.t S1 0 S2
+.t S1 1 S1
+
+.t S2 0 S0
+.t S2 1 S1

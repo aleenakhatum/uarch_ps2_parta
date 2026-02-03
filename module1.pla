@@ -1,4 +1,4 @@
-module temp(
+module decoder(
     input in_1,
     input in_0,
     output out_0,
@@ -22,5 +22,4 @@ assign out_0 = p0_0;
 assign out_1 = p1_1;
 assign out_2 = p2_2;
 assign out_3 = p3_3;
-
 endmodule

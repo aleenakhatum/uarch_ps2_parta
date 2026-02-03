@@ -1,0 +1,48 @@
+.i 3
+.o 2
+
+.ilb c p t       
+.ob gh gw        
+
+.st HG HY WG WB  
+
+.so HG 10
+.so HY 00
+.so WG 01
+.so WB 01
+
+.t HG 000 HG
+.t HG 001 HY
+.t HG 010 HY
+.t HG 011 HY
+.t HG 100 HG
+.t HG 101 HY
+.t HG 110 HY
+.t HG 111 HY
+
+.t HY 000 HY
+.t HY 001 WG
+.t HY 010 WG
+.t HY 011 WG
+.t HY 100 HY
+.t HY 101 WG
+.t HY 110 WG
+.t HY 111 WG
+
+.t WG 000 WG
+.t WG 001 WG
+.t WG 010 WB
+.t WG 011 WB
+.t WG 100 WG
+.t WG 101 WG
+.t WG 110 WB
+.t WG 111 WB
+
+.t WB 000 WB
+.t WB 001 HG
+.t WB 010 HG
+.t WB 011 HG
+.t WB 100 WB
+.t WB 101 HG
+.t WB 110 HG
+.t WB 111 HG

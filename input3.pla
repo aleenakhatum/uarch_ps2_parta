@@ -4,9 +4,12 @@
 .ilb x        
 .ob z         
 
-.st S0 S1     
+.st S0 S1
 
-S0 0 S0 0
-S0 1 S1 1
-S1 0 S0 0
-S1 1 S1 1
+.so S0 0
+.so S1 1
+
+.t S0 0 S0 
+.t S0 1 S1 
+.t S1 0 S0 
+.t S1 1 S1 

@@ -1,0 +1,12 @@
+# --- THE CORRECT COMBINATION (F0A5) ---
+# --- THE "FAIL" CONDITIONS ---
+# If a bit is supposed to be 1, but is 0 -> Fail
+# If a bit is supposed to be 0, but is 1 -> Fail
+# Checking the lower byte (1010 0101)
+.i 16
+.o 1
+.ilb I15 I14 I13 I12 I11 I10 I9 I8 I7 I6 I5 I4 I3 I2 I1 I0
+.ob UNLOCK
+.p 1
+1111000010100101 1
+.e

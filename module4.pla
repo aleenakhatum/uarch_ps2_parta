@@ -1,0 +1,45 @@
+module state3(
+    input clk,
+    input rst,
+    input set,
+    input x,
+    output z
+);
+
+wire state0;
+wire nstate0;
+wire state1;
+wire nstate1;
+
+wire call0p0_0;
+wire call0p1_0;
+wire call0p2_0;
+wire call0p3_0;
+wire call0p4_0;
+wire call0p5_0;
+wire ns0;
+wire ns1;
+wire nx;
+
+inv1$ call0u0 (nstate0, state0);
+inv1$ call0u1 (nstate1, state1);
+inv1$ call0u2 (nx, x);
+
+and3$ call0u3 (call0p1_1, nstate0, nstate1, x);
+and3$ call0u4 (call0p2_0, nstate0, state1, nx);
+and3$ call0u5 (call0p3_1, nstate0, state1, x);
+and3$ call0u6 (call0p5_1, state0, nstate1, x);
+
+assign ns0 = call0p2_0;
+or3$ call0u7 (ns1, call0p1_1, call0p3_1, call0p5_1);
+wire call1p0_0;
+
+inv1$ call1u0 (nstate0, state0);
+inv1$ call1u1 (nstate1, state1);
+
+and2$ call1u2 (call1p0_0, state0, nstate1);
+
+assign z = call1p0_0;
+dff$ u_dff0 (clk, ns0, state0, nstate0, rst, set);
+dff$ u_dff1 (clk, ns1, state1, nstate1, rst, set);
+endmodule

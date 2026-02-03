@@ -1,4 +1,4 @@
-module temp(
+module example(
     input Q1,
     input Q0,
     input D,
@@ -28,5 +28,4 @@ and3$ u9 (p4_1, nQ1, Q0, N);
 or2$ u10 (T1, p0_0, p4_0);
 or3$ u11 (T0, p1_1, p3_1, p4_1);
 assign OPEN = p2_2;
-
 endmodule

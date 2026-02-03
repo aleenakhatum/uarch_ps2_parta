@@ -1,0 +1,8 @@
+.i 2
+.o 1
+.ilb state0 state1
+.ob z
+
+00 0
+01 0
+10 1

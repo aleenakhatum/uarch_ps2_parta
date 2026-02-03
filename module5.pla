@@ -1,0 +1,84 @@
+module state3(
+    input clk,
+    input rst,
+    input set,
+    input c,
+    input p,
+    input t,
+    output gh,
+    output gw
+);
+
+wire state0;
+wire nstate0;
+wire state1;
+wire nstate1;
+
+wire call0p0_0;
+wire call0p10_0;
+wire call0p11_0;
+wire call0p12_0;
+wire call0p13_0;
+wire call0p14_0;
+wire call0p15_0;
+wire call0p16_0;
+wire call0p17_0;
+wire call0p18_0;
+wire call0p19_0;
+wire call0p1_0;
+wire call0p20_0;
+wire call0p21_0;
+wire call0p22_0;
+wire call0p23_0;
+wire call0p24_0;
+wire call0p25_0;
+wire call0p26_0;
+wire call0p27_0;
+wire call0p28_0;
+wire call0p29_0;
+wire call0p2_0;
+wire call0p30_0;
+wire call0p31_0;
+wire call0p3_0;
+wire call0p4_0;
+wire call0p5_0;
+wire call0p6_0;
+wire call0p7_0;
+wire call0p8_0;
+wire call0p9_0;
+wire nc;
+wire np;
+wire ns0;
+wire ns1;
+wire nt;
+
+inv1$ call0u0 (nstate1, state1);
+inv1$ call0u1 (nstate0, state0);
+inv1$ call0u2 (nc, c);
+inv1$ call0u3 (np, p);
+inv1$ call0u4 (nt, t);
+
+and3$ call0u5 (call0p0_0, state1, np, nt);
+and3$ call0u6 (call0p1_0, nstate1, state0, t);
+and3$ call0u7 (call0p2_1, state0, np, nt);
+and3$ call0u8 (call0p3_0, nstate1, state0, p);
+and3$ call0u9 (call0p4_1, nstate1, nstate0, t);
+and2$ call0u10 (call0p5_0, state1, nstate0);
+and2$ call0u11 (call0p6_1, nstate0, p);
+
+or4$ call0u12 (ns1, call0p0_0, call0p1_0, call0p3_0, call0p5_0);
+or3$ call0u13 (ns0, call0p2_1, call0p4_1, call0p6_1);
+wire call1p0_0;
+wire call1p1_0;
+
+inv1$ call1u0 (nstate1, state1);
+inv1$ call1u1 (nstate0, state0);
+
+and2$ call1u2 (call1p0_0, nstate1, nstate0);
+assign call1p1_1 = state1;
+
+assign gh = call1p0_0;
+assign gw = call1p1_1;
+dff$ u_dff0 (clk, ns0, state0, nstate0, rst, set);
+dff$ u_dff1 (clk, ns1, state1, nstate1, rst, set);
+endmodule

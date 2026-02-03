@@ -1,4 +1,4 @@
-module fsm(
+module state3(
     input clk,
     input rst,
     input set,
@@ -9,24 +9,26 @@ module fsm(
 wire state0;
 wire nstate0;
 
-wire nx;
-inv1$ u0 (nx, x);
-
+wire call0p0_0;
+wire call0p1_0;
+wire call0p2_0;
+wire call0p3_0;
 wire ns0;
+wire nx;
 
-wire z_p3;
-wire z_p1;
-wire ns0_p3;
-wire ns0_p1;
+inv1$ call0u0 (nstate0, state0);
+inv1$ call0u1 (nx, x);
 
-and2$ u1 (ns0_p1, nstate0, x);
-and2$ u2 (ns0_p3, state0, x);
-or2$ u3 (ns0, ns0_p1, ns0_p3);
+and2$ call0u2 (call0p1_0, nstate0, x);
+and2$ call0u3 (call0p3_0, state0, x);
 
-assign z_p1 = nstate0;
-assign z_p3 = state0;
-or2$ u4 (z, z_p1, z_p3);
+or2$ call0u4 (ns0, call0p1_0, call0p3_0);
+wire call1p0_0;
 
+inv1$ call1u0 (nstate0, state0);
+
+assign call1p0_0 = state0;
+
+assign z = call1p0_0;
 dff$ u_dff0 (clk, ns0, state0, nstate0, rst, set);
-
 endmodule

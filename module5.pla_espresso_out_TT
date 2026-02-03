@@ -1,0 +1,8 @@
+.i 2
+.o 2
+.ilb state1 state0
+.ob gh gw
+.p 2
+00 10
+1- 01
+.e
